@@ -25,11 +25,28 @@ npm run build
 npm run preview
 ```
 
-Upload the contents of `dist/` to a static HTTPS host. The build uses relative asset paths and can be hosted at a separate domain or a subdirectory. No application server or database is required. Generated builds are excluded from Git; run `npm run build` to produce `dist/`.
+Upload the contents of `dist/` to a static HTTPS host. The build uses relative asset paths and can be hosted at a separate domain or a subdirectory. Guest mode needs only static hosting. Google sign-in requires the separate account server described below. Generated builds are excluded from Git; run `npm run build` to produce `dist/`.
 
 ## Privacy
 
-Contact details, optional compressed photo, and progress stay in sessionStorage in the current browser tab. No forms submit to a backend or to Popl. Refreshing resumes progress. Browser session restoration can preserve tab storage, so use Clear session data on a shared device. External fonts are loaded from Google Fonts. App store/help links open official external services only when selected. Contact details are not included in those URLs. Setup-note downloads contain personal contact information and should be kept private. A shared team progress dashboard would require a separate authenticated backend.
+Guests keep details and progress in sessionStorage in their current tab. Signed-in reps save their profile, optional compressed preview photo, and progress to a private server-side SQLite record keyed to their verified Google identity. Drafts are cached per account on the device for retries. Signing in never automatically imports guest details. Import guest setup is an explicit action. Popl credentials are never requested or stored, and the profile is not automatically submitted to Popl. External fonts load from Google Fonts. Downloaded setup notes contain contact information and should be kept private.
+
+## Google sign-in
+
+Use Node.js 22.13+ for the account server (`node:sqlite` is required).
+
+```sh
+npm ci --prefix server
+npm test --prefix server
+GOOGLE_CREDENTIALS=/secure/path/google-oauth.json npm start --prefix server
+```
+
+Configure a Google OAuth **Web application** client with origin `https://rep.mattjhagen.xyz` and redirect URI `https://rep.mattjhagen.xyz/auth/google/callback`. Rep Launch uses a separate Google client; PitchPilot credentials are not modified. Google client JSON belongs outside the repository, readable only by the service user. In Google's Testing mode, add the intended reps as test users.
+
+The server defaults to `127.0.0.1:3023`, with a distinct Rep Launch database. Proxy `/auth/` and `/api/` to that loopback address; disable access logging for OAuth callback routes. All other paths serve `dist/`. Auth uses the authorization-code flow with PKCE, one-use state, nonce verification, validated Google ID tokens, host-only Secure/HttpOnly cookies, and CSRF protection. Every profile read/write is scoped by the server to the signed-in account, and version checks reject stale cross-device writes. Profile and auth responses use `Cache-Control: no-store`.
+
+`deploy/rep-launch-accounts.service` documents the R510 service layout. `deploy/activate-accounts.sh` is specific to the inspected existing R510 deployment and stops if its expected release/configuration has changed. It installs the already-validated staging build, enables the new service, and reloads Nginx without restarting the tunnel or Pitch Coach. It retains a rollback copy of the existing configuration and release pointer.
+
 
 ## Verified
 
@@ -40,6 +57,7 @@ Contact details, optional compressed photo, and progress stay in sessionStorage 
 - Refresh preserves details and step.
 - Android selection points to Popl's official download page.
 - Phone layout inspected at 390px width.
+- Google-flow, account isolation, stale-version conflicts, CSRF rejection, and logout tests pass.
 - No real Popl account, app installation, or Wallet pass was created during testing.
 
 ## Official references

@@ -1,0 +1,27 @@
+[Unit]
+Description=Rep Launch Google sign-in and private onboarding profiles
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=matt
+Group=matt
+WorkingDirectory=/opt/rep-onboarding/accounts/server
+ExecStart=/usr/bin/node /opt/rep-onboarding/accounts/server/server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/matt/.local/share/rep-launch
+Environment=NODE_ENV=production
+Environment=PORT=3023
+Environment=PUBLIC_ORIGIN=https://rep.mattjhagen.xyz
+Environment=GOOGLE_CREDENTIALS=/home/matt/.config/rep-launch/google-oauth.json
+Environment=DATABASE_PATH=/home/matt/.local/share/rep-launch/accounts.sqlite
+
+[Install]
+WantedBy=multi-user.target
