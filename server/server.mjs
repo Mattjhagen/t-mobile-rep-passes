@@ -2,7 +2,7 @@ import express from 'express';
 import {DatabaseSync} from 'node:sqlite';
 import {OAuth2Client} from 'google-auth-library';
 import {randomBytes,createHash} from 'node:crypto';
-import {readFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,mkdirSync,realpathSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const random=()=>randomBytes(32).toString('base64url');
@@ -104,7 +104,7 @@ export function createApp({db,clientId='',clientSecret='',origin='https://rep.ma
   app.use((err,req,res,next)=>{res.status(err.type==='entity.too.large'?413:400).json({error:'Request could not be processed'});});
   return app;
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(realpathSync(process.argv[1])).href){
   let credentials={};try{const json=JSON.parse(readFileSync(process.env.GOOGLE_CREDENTIALS||'/home/matt/.config/rep-launch/google-oauth.json','utf8'));credentials=json.web||{};}catch{}
   const dbPath=process.env.DATABASE_PATH||'/home/matt/.local/share/rep-launch/accounts.sqlite';
   mkdirSync(dirname(dbPath),{recursive:true,mode:0o700});

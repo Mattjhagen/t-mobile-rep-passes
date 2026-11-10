@@ -21,3 +21,18 @@ test('Google flow, private onboarding profiles, version conflicts, CSRF, replay,
   assert.equal((await request('/api/profile',{headers:{Cookie:a.cookie}})).status,401);
  }finally{await new Promise(r=>server.close(r));db.close();}
 });
+
+test('account server starts when launched through a release symlink',async(t)=>{
+ const {mkdtempSync,symlinkSync,rmSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');const {join,dirname}=await import('node:path');
+ const {fileURLToPath}=await import('node:url');const {spawn}=await import('node:child_process');
+ const root=mkdtempSync(join(tmpdir(),'rep-account-startup-'));
+ symlinkSync(dirname(fileURLToPath(import.meta.url)),join(root,'server'),'dir');
+ const child=spawn(process.execPath,[join(root,'server/server.mjs')],{env:{...process.env,PORT:'0',DATABASE_PATH:join(root,'accounts.sqlite'),GOOGLE_CREDENTIALS:join(root,'no-client.json')},stdio:['ignore','pipe','pipe']});
+ t.after(async()=>{if(child.exitCode===null){child.kill();await new Promise(r=>child.once('exit',r));}rmSync(root,{recursive:true,force:true});});
+ await new Promise((resolve,reject)=>{
+  const timeout=setTimeout(()=>reject(Error('Server did not listen through symlink')),10000);
+  child.stdout.on('data',chunk=>{if(chunk.toString().includes('accounts listening on loopback')){clearTimeout(timeout);resolve();}});
+  child.once('exit',code=>{clearTimeout(timeout);reject(Error('Server exited before listening: '+code));});
+ });
+});
